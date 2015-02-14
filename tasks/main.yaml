@@ -69,6 +69,12 @@
   command: grub-install /dev/sda
   when: kernelupdate.changed
 
+- name: make sure to load the kvm-intel module
+  lineinfile: state=present dest=/etc/modules regexp='^kvm_intel' line="kvm_intel"
+
+- name: make sure to load the kvm-amd module
+  lineinfile: state=present dest=/etc/modules regexp='^kvm_amd' line="kvm_amd"
+
 - name: reboot machine
   command: /sbin/reboot -t now
   when: kernelupdate.changed
@@ -148,10 +154,4 @@
   tags:
     - after-reboot
     - default-credentials
-
-- name: make sure to load the kvm-intel module
-  lineinfile: state=present dest=/etc/modules regexp='^kvm_intel' line="kvm_intel"
-
-- name: make sure to load the kvm-amd module
-  lineinfile: state=present dest=/etc/modules regexp='^kvm_amd' line="kvm_amd"
 
