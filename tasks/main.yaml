@@ -66,7 +66,7 @@
     - fixhostname
 
 - name: make sure grub is installed...
-  command: grub-install /dev/sda
+  command: "grub-install {{ bootdevice }}"
   when: kernelupdate.changed
 
 - name: make sure to load the kvm-intel module
