@@ -22,10 +22,19 @@
   lineinfile: "state=present dest=/etc/default/grub
   regexp='^GRUB_DEFAULT='
   line=GRUB_DEFAULT=0"
+  register: grubupdate
+
+- name: set sane grub timeout
+  lineinfile: "state=present dest=/etc/default/grub
+  regexp='^GRUB_TIMEOUT='
+  line='GRUB_TIMEOUT=5'"
+  register: grubupdate2
 
 - name: update grub
   command: update-grub
-  when: kernelupdate.changed
+  register: needsreboot
+  changed_when: true
+  when: kernelupdate.changed or grubupdate.changed or grubupdate2.changed
 
 # is this needed?
 - name: setup IPV4 forwarding for NAT
@@ -65,9 +74,13 @@
   tags:
     - fixhostname
 
+- name: make sure our hostname is set
+  hostname: "name={{ hostname }}"
+  tags:
+    - fixhostname
+
 - name: make sure grub is installed...
   command: "grub-install {{ bootdevice }}"
-  when: kernelupdate.changed
 
 - name: make sure to load the kvm-intel module
   lineinfile: state=present dest=/etc/modules regexp='^kvm_intel' line="kvm_intel"
@@ -77,16 +90,16 @@
 
 - name: reboot machine
   command: /sbin/reboot -t now
-  when: kernelupdate.changed
+  when: needsreboot.changed
 
 - name: wait until rebooted...
   local_action: wait_for host={{ ansible_ssh_host }} port={{ ansible_ssh_port }} state=started search_regex=OpenSSH timeout=300 delay=20
   sudo: no
-  when: kernelupdate.changed
+  when: needsreboot.changed
 
 - name: is it running?
   command: uptime
-  when: kernelupdate.changed
+  when: needsreboot.changed
   changed_when: false
 
 - name: install dependency packages for PVE
